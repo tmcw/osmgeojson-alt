@@ -1,6 +1,36 @@
 var _ = require("./lodash.custom.js");
 var rewind = require("@mapbox/geojson-rewind");
 
+/** From just */
+function isEmpty(obj) {
+  if (obj == null) {
+    return true;
+  }
+
+  if (Array.isArray(obj)) {
+    return !obj.length;
+  }
+
+  if (typeof obj == "string") {
+    return !obj.length;
+  }
+
+  var type = {}.toString.call(obj);
+
+  if (type == "[object Object]") {
+    return (
+      !Object.keys(obj).length && !Object.getOwnPropertySymbols(obj).length
+    );
+  }
+
+  if (type == "[object Map]" || type == "[object Set]") {
+    return !obj.size;
+  }
+
+  // other primitive || unidentifed object type
+  return Object(obj) !== obj || !Object.keys(obj).length;
+}
+
 // see https://wiki.openstreetmap.org/wiki/Overpass_turbo/Polygon_Features
 var polygonFeatures = {};
 require("osm-polygon-features").forEach(function (tags) {
@@ -390,7 +420,7 @@ osmtogeojson = function (data, options, featureCallback) {
       copy_attribute(node, nodeObject, "changeset");
       copy_attribute(node, nodeObject, "uid");
       copy_attribute(node, nodeObject, "user");
-      if (!_.isEmpty(tags)) nodeObject.tags = tags;
+      if (!isEmpty(tags)) nodeObject.tags = tags;
       nodes.push(nodeObject);
     });
     // ways
@@ -418,7 +448,7 @@ osmtogeojson = function (data, options, featureCallback) {
       copy_attribute(way, wayObject, "uid");
       copy_attribute(way, wayObject, "user");
       if (wnodes.length > 0) wayObject.nodes = wnodes;
-      if (!_.isEmpty(tags)) wayObject.tags = tags;
+      if (!isEmpty(tags)) wayObject.tags = tags;
       if ((centroid = way.getElementsByTagName("center")[0]))
         centerGeometry(wayObject, centroid);
       if (has_full_geometry)
@@ -459,7 +489,7 @@ osmtogeojson = function (data, options, featureCallback) {
       copy_attribute(relation, relObject, "uid");
       copy_attribute(relation, relObject, "user");
       if (members.length > 0) relObject.members = members;
-      if (!_.isEmpty(tags)) relObject.tags = tags;
+      if (!isEmpty(tags)) relObject.tags = tags;
       if ((centroid = relation.getElementsByTagName("center")[0]))
         centerGeometry(relObject, centroid);
       if (has_full_geometry)
