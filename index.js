@@ -31,6 +31,21 @@ function isEmpty(obj) {
   return Object(obj) !== obj || !Object.keys(obj).length;
 }
 
+function compact(arr) {
+  if (!Array.isArray(arr)) {
+    throw new Error("expected an array");
+  }
+  var result = [];
+  var len = arr.length;
+  for (var i = 0; i < len; i++) {
+    var elem = arr[i];
+    if (elem) {
+      result.push(elem);
+    }
+  }
+  return result;
+}
+
 // see https://wiki.openstreetmap.org/wiki/Overpass_turbo/Polygon_Features
 var polygonFeatures = {};
 require("osm-polygon-features").forEach(function (tags) {
@@ -738,16 +753,16 @@ osmtogeojson = function (data, options, featureCallback) {
               }),
             };
           });
-          members = _.compact(members);
+          members = compact(members);
           // construct connected linestrings
           var linestrings;
           linestrings = join(members);
 
           // sanitize mp-coordinates (remove empty clusters or rings, {lat,lon,...} to [lon,lat]
           var coords = [];
-          coords = _.compact(
+          coords = compact(
             linestrings.map(function (linestring) {
-              return _.compact(
+              return compact(
                 linestring.map(function (node) {
                   return [+node.lon, +node.lat];
                 }),
@@ -926,7 +941,7 @@ osmtogeojson = function (data, options, featureCallback) {
               }),
             };
           });
-          members = _.compact(members);
+          members = compact(members);
           // construct outer and inner rings
           var outers, inners;
           outers = join(
@@ -1007,9 +1022,9 @@ osmtogeojson = function (data, options, featureCallback) {
           }
           // sanitize mp-coordinates (remove empty clusters or rings, {lat,lon,...} to [lon,lat]
           var mp_coords = [];
-          mp_coords = _.compact(
+          mp_coords = compact(
             mp.map(function (cluster) {
-              var cl = _.compact(
+              var cl = compact(
                 cluster.map(function (ring) {
                   if (ring.length < 4) {
                     // todo: is this correct: ring.length < 4 ?
@@ -1021,7 +1036,7 @@ osmtogeojson = function (data, options, featureCallback) {
                       );
                     return;
                   }
-                  return _.compact(
+                  return compact(
                     ring.map(function (node) {
                       return [+node.lon, +node.lat];
                     }),
