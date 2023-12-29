@@ -1,5 +1,6 @@
-var _ = require("./lodash.custom.js");
-var rewind = require("@mapbox/geojson-rewind");
+import { merge as lmerge } from "lodash-es";
+import rewind from "@mapbox/geojson-rewind";
+import polyfeatures from "osm-polygon-features";
 
 function each(arr, cb) {
   if (Array.isArray(arr)) {
@@ -109,7 +110,7 @@ function compact(arr) {
 
 // see https://wiki.openstreetmap.org/wiki/Overpass_turbo/Polygon_Features
 var polygonFeatures = {};
-require("osm-polygon-features").forEach(function (tags) {
+polyfeatures.forEach(function (tags) {
   if (tags.polygon === "all") polygonFeatures[tags.key] = true;
   else {
     var list =
@@ -136,7 +137,7 @@ function default_deduplicator(objectA, objectB) {
       : objectB;
   }
   // otherwise: return _.merged obj properties
-  const result = _.merge(objectA, objectB);
+  const result = lmerge(objectA, objectB);
   return result;
 }
 
@@ -1352,6 +1353,4 @@ function join(ways) {
 }
 
 // for backwards compatibility
-osmtogeojson.toGeojson = osmtogeojson;
-
-module.exports = osmtogeojson;
+export default osmtogeojson;
