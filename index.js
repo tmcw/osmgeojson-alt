@@ -1,6 +1,67 @@
 var _ = require("./lodash.custom.js");
 var rewind = require("@mapbox/geojson-rewind");
 
+function each(arr, cb) {
+  if (Array.isArray(arr)) {
+    arr.forEach(cb);
+  }
+  if (arr.length) {
+    for (let i = 0; i < arr.length; i++) {
+      cb(arr[i], i);
+    }
+  }
+  return arr;
+}
+
+function extend(/* [deep], obj1, obj2, [objn] */) {
+  var args = [].slice.call(arguments);
+  var deep = false;
+  if (typeof args[0] == "boolean") {
+    deep = args.shift();
+  }
+  var result = args[0];
+  if (isUnextendable(result)) {
+    throw new Error("extendee must be an object");
+  }
+  var extenders = args.slice(1);
+
+  var len = extenders.length;
+  for (var i = 0; i < len; i++) {
+    var extender = extenders[i];
+    for (var key in extender) {
+      if (Object.prototype.hasOwnProperty.call(extender, key)) {
+        var value = extender[key];
+        if (deep && isCloneable(value)) {
+          var base = Array.isArray(value) ? [] : {};
+          result[key] = extend(
+            true,
+            Object.prototype.hasOwnProperty.call(result, key) &&
+              !isUnextendable(result[key])
+              ? result[key]
+              : base,
+            value,
+          );
+        } else {
+          result[key] = value;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function isCloneable(obj) {
+  return Array.isArray(obj) || {}.toString.call(obj) == "[object Object]";
+}
+
+function isUnextendable(val) {
+  return !val || (typeof val != "object" && typeof val != "function");
+}
+
+function merge(...args) {
+  return extend(true, ...args);
+}
+
 /** From just */
 function isEmpty(obj) {
   if (obj == null) {
@@ -74,14 +135,15 @@ function default_deduplicator(objectA, objectB) {
       ? objectA
       : objectB;
   }
-  // otherwise: return merged obj properties
-  return _.merge(objectA, objectB);
+  // otherwise: return _.merged obj properties
+  const result = _.merge(objectA, objectB);
+  return result;
 }
 
 var osmtogeojson = {};
 
 osmtogeojson = function (data, options, featureCallback) {
-  options = _.merge(
+  options = merge(
     {
       verbose: false,
       flatProperties: true,
@@ -332,7 +394,7 @@ osmtogeojson = function (data, options, featureCallback) {
       }
       if (!Array.isArray(way.nodes)) {
         way.nodes = [];
-        _.each(nds, function (nd, i) {
+        each(nds, function (nd, i) {
           way.nodes.push(
             "_anonymous@" +
               nd.getAttribute("lat") +
@@ -341,7 +403,7 @@ osmtogeojson = function (data, options, featureCallback) {
           );
         });
       }
-      _.each(nds, function (nd, i) {
+      each(nds, function (nd, i) {
         if (nd.getAttribute("lat")) {
           addFullGeometryNode(
             nd.getAttribute("lat"),
@@ -386,7 +448,7 @@ osmtogeojson = function (data, options, featureCallback) {
           geometryWay.nodes.push(geometryPseudoNode.id);
           nodes.push(geometryPseudoNode);
         }
-        _.each(nds, function (nd) {
+        each(nds, function (nd) {
           if (nd.getAttribute("lat")) {
             addFullGeometryWayPseudoNode(
               nd.getAttribute("lat"),
@@ -398,7 +460,7 @@ osmtogeojson = function (data, options, featureCallback) {
         });
         ways.push(geometryWay);
       }
-      _.each(members, function (member, i) {
+      each(members, function (member, i) {
         if (rel.members[i].type == "node") {
           if (member.getAttribute("lat")) {
             addFullGeometryNode(
@@ -419,9 +481,9 @@ osmtogeojson = function (data, options, featureCallback) {
       });
     }
     // nodes
-    _.each(xml.getElementsByTagName("node"), function (node, i) {
+    each(xml.getElementsByTagName("node"), function (node, i) {
       var tags = {};
-      _.each(node.getElementsByTagName("tag"), function (tag) {
+      each(node.getElementsByTagName("tag"), function (tag) {
         tags[tag.getAttribute("k")] = tag.getAttribute("v");
       });
       var nodeObject = {
@@ -440,14 +502,14 @@ osmtogeojson = function (data, options, featureCallback) {
     });
     // ways
     var centroid, bounds;
-    _.each(xml.getElementsByTagName("way"), function (way, i) {
+    each(xml.getElementsByTagName("way"), function (way, i) {
       var tags = {};
       var wnodes = [];
-      _.each(way.getElementsByTagName("tag"), function (tag) {
+      each(way.getElementsByTagName("tag"), function (tag) {
         tags[tag.getAttribute("k")] = tag.getAttribute("v");
       });
       var has_full_geometry = false;
-      _.each(way.getElementsByTagName("nd"), function (nd, i) {
+      each(way.getElementsByTagName("nd"), function (nd, i) {
         var id;
         if ((id = nd.getAttribute("ref"))) wnodes[i] = id;
         if (!has_full_geometry && nd.getAttribute("lat"))
@@ -473,14 +535,14 @@ osmtogeojson = function (data, options, featureCallback) {
       ways.push(wayObject);
     });
     // relations
-    _.each(xml.getElementsByTagName("relation"), function (relation, i) {
+    each(xml.getElementsByTagName("relation"), function (relation, i) {
       var tags = {};
       var members = [];
-      _.each(relation.getElementsByTagName("tag"), function (tag) {
+      each(relation.getElementsByTagName("tag"), function (tag) {
         tags[tag.getAttribute("k")] = tag.getAttribute("v");
       });
       var has_full_geometry = false;
-      _.each(relation.getElementsByTagName("member"), function (member, i) {
+      each(relation.getElementsByTagName("member"), function (member, i) {
         members[i] = {};
         copy_attribute(member, members[i], "ref");
         copy_attribute(member, members[i], "role");
@@ -1201,7 +1263,7 @@ osmtogeojson = function (data, options, featureCallback) {
     // optionally, flatten properties
     if (options.flatProperties) {
       geojson.features.forEach(function (f) {
-        f.properties = _.merge(f.properties.meta, f.properties.tags, {
+        f.properties = merge(f.properties.meta, f.properties.tags, {
           id: f.properties.type + "/" + f.properties.id,
         });
       });
